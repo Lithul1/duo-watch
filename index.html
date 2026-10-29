@@ -1,0 +1,841 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Duo Watch</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Schibsted+Grotesk:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root {
+  color-scheme: light;
+  --bg: #EEF1F5;
+  --surface: #F8FAFC;
+  --raised: #FFFFFF;
+  --ink: #121A2E;
+  --muted: #5A6478;
+  --line: #D3D9E3;
+  --today: #12A26B;
+  --today-ink: #03140C;
+  --today-soft: #D6F2E5;
+  --later: #B4760F;
+  --later-soft: #FBEBCF;
+  --none: #8C95A6;
+  --error: #C93636;
+  --error-soft: #F9DEDE;
+  --crease: rgba(18, 26, 46, .10);
+  --star: #F4F5F2;
+  --night: #1B2440;
+  --focus: #3466F0;
+  --font: "Schibsted Grotesk", ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  box-sizing: border-box;
+  padding-top: env(safe-area-inset-top, 0px);
+  padding-bottom: env(safe-area-inset-bottom, 0px);
+}
+@media (prefers-color-scheme: dark) {
+  :root {
+    color-scheme: dark;
+    --bg: #0E1424;
+    --surface: #141B2E;
+    --raised: #1A2238;
+    --ink: #E8ECF4;
+    --muted: #93A0B8;
+    --line: #283250;
+    --today: #3BDB9A;
+    --today-ink: #04170F;
+    --today-soft: #12392B;
+    --later: #F0B44C;
+    --later-soft: #3A2D13;
+    --none: #5E6A82;
+    --error: #FF7070;
+    --error-soft: #3E1A1E;
+    --crease: rgba(0, 0, 0, .45);
+    --focus: #7FA2FF;
+  }
+}
+*, *::before, *::after { box-sizing: inherit; }
+html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: var(--font);
+  font-size: 16px;
+  line-height: 1.45;
+  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: antialiased;
+}
+body::before {
+  content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px);
+  z-index: 10; background: var(--bg);
+}
+button, input { font: inherit; color: inherit; }
+button { cursor: pointer; }
+:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+h2 { font-size: 1rem; font-weight: 700; margin: 0 0 .6rem; letter-spacing: -.005em; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* ---------- top bar ---------- */
+.bar {
+  position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5;
+  display: flex; align-items: center; gap: 1rem; flex-wrap: wrap;
+  padding: .75rem clamp(1rem, 3vw, 2rem);
+  background: color-mix(in srgb, var(--bg) 88%, transparent);
+  backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  border-bottom: 1px solid var(--line);
+}
+.brand { display: flex; align-items: center; gap: .55rem; font-weight: 800; font-size: 1.05rem; letter-spacing: -.02em; margin-right: auto; }
+.brand svg { width: 26px; height: 26px; }
+.run { display: flex; align-items: center; gap: .6rem; flex-wrap: wrap; }
+.ticker { color: var(--muted); font-size: .9rem; min-width: 11ch; }
+.btn {
+  border: 1px solid var(--line); background: var(--raised); border-radius: 8px;
+  padding: .45rem .85rem; font-weight: 600; font-size: .9rem;
+}
+.btn:hover { border-color: var(--muted); }
+.btn.primary { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+.btn:disabled { opacity: .5; cursor: default; }
+.btn.small { padding: .3rem .65rem; font-size: .85rem; }
+
+/* ---------- the fold ---------- */
+.fold {
+  max-width: 1320px; margin: 0 auto;
+  display: grid; grid-template-columns: minmax(0, 1.65fr) 18px minmax(300px, 1fr);
+  min-height: calc(100vh - 60px);
+}
+.pane { padding: clamp(1.25rem, 3vw, 2.25rem) clamp(1rem, 3vw, 2rem); min-width: 0; }
+.hinge {
+  background:
+    linear-gradient(90deg, transparent 0, var(--crease) 45%, var(--crease) 55%, transparent 100%);
+  position: relative;
+}
+.hinge::after { content: ""; position: absolute; inset: 0 auto 0 50%; width: 1px; background: var(--line); }
+.settings-pane { background: var(--surface); }
+
+/* ---------- verdict: the one loud thing ---------- */
+.verdict {
+  border-radius: 18px; padding: clamp(1.25rem, 3vw, 2rem);
+  background: var(--surface); border: 1px solid var(--line);
+  transition: background-color .5s ease, color .5s ease, border-color .5s ease;
+}
+.verdict-line {
+  margin: 0; font-weight: 750; font-size: clamp(1.7rem, 3.6vw, 3.1rem);
+  line-height: 1.06; letter-spacing: -.028em; max-width: 22ch; text-wrap: balance;
+}
+.verdict-sub { margin: .8rem 0 0; color: var(--muted); max-width: 60ch; }
+.verdict.v-today { background: var(--today); color: var(--today-ink); border-color: var(--today); }
+.verdict.v-today .verdict-sub { color: var(--today-ink); opacity: .78; }
+.verdict.v-later { background: var(--later-soft); border-color: var(--later); }
+.verdict.v-error { background: var(--error-soft); border-color: var(--error); }
+.verdict a { color: inherit; font-weight: 700; }
+.demo-note { margin: .9rem 0 0; font-size: .85rem; color: var(--muted); }
+.verdict.v-today .demo-note { color: var(--today-ink); }
+
+/* ---------- board ---------- */
+.board-head { display: flex; align-items: baseline; justify-content: space-between; gap: 1rem; margin: 2rem 0 .75rem; flex-wrap: wrap; }
+.board-head h2 { margin: 0; }
+.count { color: var(--muted); font-size: .9rem; }
+.board { display: grid; gap: .75rem; }
+.store {
+  background: var(--raised); border: 1px solid var(--line); border-radius: 14px;
+  padding: .9rem 1rem 1rem;
+}
+.store.has-today { border-color: var(--today); box-shadow: inset 4px 0 0 var(--today); }
+.store-head { display: flex; justify-content: space-between; align-items: baseline; gap: .75rem; flex-wrap: wrap; margin-bottom: .7rem; }
+.store-head h3 { margin: 0; font-size: 1.05rem; font-weight: 700; letter-spacing: -.01em; }
+.where { color: var(--muted); font-size: .88rem; }
+.chips { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(auto-fill, minmax(132px, 1fr)); gap: .45rem; }
+.chip {
+  display: grid; grid-template-columns: auto 1fr; grid-template-rows: auto auto; column-gap: .5rem;
+  align-items: center; padding: .5rem .6rem; border-radius: 10px;
+  border: 1px solid var(--line); background: var(--surface);
+}
+.chip .swatch { grid-row: 1 / span 2; }
+.chip .cfg { font-weight: 650; font-size: .92rem; }
+.chip .st { font-size: .8rem; color: var(--muted); }
+.chip.s-today { background: var(--today); border-color: var(--today); color: var(--today-ink); }
+.chip.s-today .st { color: var(--today-ink); font-weight: 650; }
+.chip.s-later { background: var(--later-soft); border-color: var(--later); }
+.chip.s-later .st { color: var(--later); font-weight: 600; }
+.chip.s-ineligible, .chip.s-unknown { border-style: dashed; opacity: .7; }
+.chip.changed { animation: ping 1.6s ease-out 2; }
+@keyframes ping {
+  0% { box-shadow: 0 0 0 0 color-mix(in srgb, var(--today) 70%, transparent); }
+  100% { box-shadow: 0 0 0 12px transparent; }
+}
+.swatch { width: 18px; height: 18px; border-radius: 50%; display: inline-block; flex: none; border: 1px solid var(--line); }
+.sw-star { background: var(--star); border-color: #C9CDD5; }
+.sw-night { background: var(--night); border-color: #3B4870; }
+.empty { color: var(--muted); padding: 1.25rem 0; }
+
+/* ---------- log ---------- */
+.log { margin-top: 2.25rem; }
+.log ol { list-style: none; margin: 0; padding: 0; border-top: 1px solid var(--line); }
+.log li { display: grid; grid-template-columns: 5.5ch 1fr; gap: .75rem; padding: .55rem 0; border-bottom: 1px solid var(--line); font-size: .92rem; }
+.log time { color: var(--muted); }
+.log .up { color: var(--today); font-weight: 650; }
+@media (prefers-color-scheme: light) { .log .up { color: #0B7A50; } }
+
+/* ---------- settings ---------- */
+.settings-pane section { padding: 0 0 1.5rem; margin: 0 0 1.5rem; border-bottom: 1px solid var(--line); }
+.settings-pane section:last-child { border-bottom: 0; }
+.hint { color: var(--muted); font-size: .86rem; margin: .5rem 0 0; }
+.hint.warn { color: var(--error); }
+.row { display: flex; gap: .5rem; align-items: center; flex-wrap: wrap; }
+.field { display: grid; gap: .3rem; margin-bottom: .75rem; }
+.field label { font-size: .86rem; font-weight: 600; }
+.input {
+  width: 100%; padding: .55rem .7rem; border-radius: 8px;
+  border: 1px solid var(--line); background: var(--raised);
+}
+.input.zip { width: 9ch; letter-spacing: .04em; }
+.zips { display: flex; flex-wrap: wrap; gap: .4rem; margin-top: .6rem; }
+.zipchip {
+  display: inline-flex; align-items: center; gap: .35rem; padding: .25rem .3rem .25rem .65rem;
+  border-radius: 999px; background: var(--raised); border: 1px solid var(--line); font-weight: 600;
+}
+.zipchip button { border: 0; background: transparent; width: 24px; height: 24px; border-radius: 50%; line-height: 1; color: var(--muted); }
+.zipchip button:hover { background: var(--line); color: var(--ink); }
+
+.matrix { display: grid; grid-template-columns: auto repeat(4, minmax(0, 1fr)); gap: .35rem; align-items: center; }
+.matrix .colhead { font-size: .82rem; font-weight: 650; text-align: center; color: var(--muted); }
+.matrix .rowhead { display: flex; align-items: center; gap: .4rem; font-size: .86rem; font-weight: 600; padding-right: .35rem; white-space: nowrap; }
+.cell {
+  border: 1px solid var(--line); background: var(--raised); border-radius: 8px;
+  height: 40px; display: grid; place-items: center; font-weight: 700; font-size: .85rem; color: var(--muted);
+}
+.cell[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+details { margin-top: .75rem; }
+summary { cursor: pointer; font-size: .88rem; font-weight: 600; }
+.parts { display: grid; grid-template-columns: 1fr 1fr; gap: .4rem .6rem; margin-top: .6rem; }
+.parts label { font-size: .78rem; color: var(--muted); display: grid; gap: .2rem; }
+.parts .input { padding: .35rem .5rem; font-size: .85rem; letter-spacing: .03em; }
+
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 9px; overflow: hidden; background: var(--raised); }
+.seg button { border: 0; background: transparent; padding: .45rem .8rem; font-weight: 600; font-size: .88rem; }
+.seg button + button { border-left: 1px solid var(--line); }
+.seg button[aria-pressed="true"] { background: var(--ink); color: var(--bg); }
+
+.toggle { display: flex; align-items: center; justify-content: space-between; gap: 1rem; padding: .45rem 0; }
+.toggle span { font-weight: 550; }
+.switch { position: relative; width: 44px; height: 26px; border-radius: 999px; border: 1px solid var(--line); background: var(--line); flex: none; padding: 0; }
+.switch::after { content: ""; position: absolute; top: 2px; left: 2px; width: 20px; height: 20px; border-radius: 50%; background: var(--raised); transition: transform .2s ease; box-shadow: 0 1px 2px rgba(0,0,0,.25); }
+.switch[aria-checked="true"] { background: var(--today); border-color: var(--today); }
+.switch[aria-checked="true"]::after { transform: translateX(18px); }
+.status-line { font-size: .86rem; margin: .6rem 0 0; color: var(--muted); }
+.status-line.ok { color: var(--today); }
+@media (prefers-color-scheme: light) { .status-line.ok { color: #0B7A50; } }
+.status-line.bad { color: var(--error); }
+
+/* ---------- responsive ---------- */
+@media (max-width: 900px) {
+  .fold { grid-template-columns: minmax(0, 1fr); }
+  .hinge { height: 18px; background: linear-gradient(180deg, transparent 0, var(--crease) 45%, var(--crease) 55%, transparent 100%); }
+  .hinge::after { inset: 50% 0 auto 0; width: auto; height: 1px; }
+  .verdict-line { max-width: none; }
+}
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+</style>
+</head>
+<body>
+
+<header class="bar">
+  <div class="brand">
+    <svg viewBox="0 0 32 32" aria-hidden="true">
+      <rect x="3" y="5" width="12" height="22" rx="3" fill="currentColor" opacity=".9"/>
+      <rect x="17" y="5" width="12" height="22" rx="3" fill="none" stroke="currentColor" stroke-width="2"/>
+    </svg>
+    Duo Watch
+  </div>
+  <div class="run">
+    <span class="ticker" id="ticker" aria-live="off">Paused</span>
+    <button class="btn" id="checkNow">Check now</button>
+    <button class="btn primary" id="runBtn">Pause</button>
+  </div>
+</header>
+
+<main class="fold">
+  <section class="pane board-pane" aria-label="Availability">
+    <div class="verdict" id="verdictBox">
+      <p class="verdict-line" id="verdict" aria-live="polite">Starting up…</p>
+      <p class="verdict-sub" id="verdictSub"></p>
+      <p class="demo-note" id="demoNote" hidden>You’re looking at demo data. Connect your Worker to see real stores.</p>
+    </div>
+
+    <div class="board-head">
+      <h2>Stores</h2>
+      <span class="count" id="storeCount"></span>
+    </div>
+    <div class="board" id="board"></div>
+
+    <section class="log" aria-label="Changes">
+      <h2>Changes</h2>
+      <ol id="log"></ol>
+      <p class="empty" id="logEmpty">Status changes show up here as they happen.</p>
+    </section>
+  </section>
+
+  <div class="hinge" aria-hidden="true"></div>
+
+  <aside class="pane settings-pane" aria-label="Settings">
+    <section>
+      <h2>ZIP codes</h2>
+      <div class="row">
+        <label class="sr" for="zipInput">Add a ZIP code</label>
+        <input class="input zip" id="zipInput" inputmode="numeric" maxlength="5" placeholder="10001" autocomplete="postal-code">
+        <button class="btn" id="zipAdd">Add ZIP</button>
+      </div>
+      <div class="zips" id="zips"></div>
+      <p class="hint" id="zipHint">Apple returns the closest stores to each ZIP. Overlapping stores are merged.</p>
+    </section>
+
+    <section>
+      <h2>Models</h2>
+      <div class="matrix" id="matrix" role="group" aria-label="Choose models to watch"></div>
+      <p class="hint" id="lookupHint"></p>
+      <details>
+        <summary>Part numbers</summary>
+        <p class="hint">Unlocked US models. If a model always comes back empty, open it on apple.com and copy the part number from the page.</p>
+        <div class="parts" id="parts"></div>
+      </details>
+    </section>
+
+    <section>
+      <h2>Check every</h2>
+      <div class="seg" id="intervalSeg" role="group" aria-label="Check interval"></div>
+      <p class="hint">Each check adds a little random delay so it doesn’t hit Apple on a fixed beat.</p>
+    </section>
+
+    <section>
+      <h2>Alerts in this tab</h2>
+      <div class="toggle"><span id="lblNotify">Browser notifications</span><button class="switch" id="swNotify" role="switch" aria-labelledby="lblNotify" aria-checked="false"></button></div>
+      <div class="toggle"><span id="lblSound">Chime</span><button class="switch" id="swSound" role="switch" aria-labelledby="lblSound" aria-checked="true"></button></div>
+      <div class="row" style="margin-top:.5rem"><button class="btn small" id="testLocal">Try a test alert</button></div>
+      <p class="status-line" id="notifyStatus"></p>
+    </section>
+
+    <section>
+      <h2>Alerts on your phone</h2>
+      <p class="hint" style="margin-top:0">The Worker checks every few minutes, even with this page closed, and pushes to the free ntfy app.</p>
+      <div class="field" style="margin-top:.75rem">
+        <label for="topic">ntfy topic</label>
+        <div class="row">
+          <input class="input" id="topic" style="flex:1" placeholder="duo-…" autocomplete="off" spellcheck="false">
+          <button class="btn small" id="topicGen">New</button>
+        </div>
+      </div>
+      <div class="row">
+        <button class="btn small primary" id="bgSave">Turn on phone alerts</button>
+        <button class="btn small" id="bgOff">Turn off</button>
+        <button class="btn small" id="bgTest">Send test</button>
+      </div>
+      <p class="status-line" id="bgStatus"></p>
+    </section>
+
+    <section>
+      <h2>Connection</h2>
+      <div class="toggle"><span id="lblDemo">Demo data</span><button class="switch" id="swDemo" role="switch" aria-labelledby="lblDemo" aria-checked="true"></button></div>
+      <div class="field" style="margin-top:.5rem">
+        <label for="workerUrl">Worker URL</label>
+        <input class="input" id="workerUrl" placeholder="https://duo-watch.yourname.workers.dev" autocomplete="off" spellcheck="false">
+      </div>
+      <div class="field">
+        <label for="token">Access token</label>
+        <input class="input" id="token" type="password" autocomplete="off" spellcheck="false">
+      </div>
+      <button class="btn small" id="testConn">Test connection</button>
+      <p class="status-line" id="connStatus"></p>
+    </section>
+  </aside>
+</main>
+
+<script>
+(() => {
+  // ---------- config ----------
+  const CONFIGS = [
+    { id: 'sw256', color: 'Star White', storage: '256GB', part: 'MK1E4LL/A' },
+    { id: 'ns256', color: 'Night Sky',  storage: '256GB', part: 'MK1F4LL/A' },
+    { id: 'sw512', color: 'Star White', storage: '512GB', part: 'MK1G4LL/A' },
+    { id: 'ns512', color: 'Night Sky',  storage: '512GB', part: 'MK1H4LL/A' },
+    { id: 'sw1tb', color: 'Star White', storage: '1TB',   part: 'MK1J4LL/A' },
+    { id: 'ns1tb', color: 'Night Sky',  storage: '1TB',   part: 'MK1L4LL/A' },
+    { id: 'sw2tb', color: 'Star White', storage: '2TB',   part: 'MK1Q4LL/A' },
+    { id: 'ns2tb', color: 'Night Sky',  storage: '2TB',   part: 'MK1R4LL/A' },
+  ];
+  const COLORS = ['Star White', 'Night Sky'];
+  const STORAGES = ['256GB', '512GB', '1TB', '2TB'];
+  const INTERVALS = [60, 90, 120, 300];
+  const MAX_LOOKUPS = 40;
+  const BUY_URL = 'https://www.apple.com/shop/buy-iphone/iphone-duo';
+  const RANK = { today: 2, later: 1 };
+  const KEY = 'duowatch.v1';
+  const DEFAULTS = {
+    workerUrl: '', token: '', demo: true, zips: [], selected: ['ns256', 'sw256'],
+    parts: {}, interval: 90, notify: false, sound: true, topic: '', running: true,
+  };
+
+  // ---------- state ----------
+  let S = load();
+  const R = {
+    result: null, statuses: {}, changed: new Set(), log: [],
+    lastCheckAt: 0, lastError: '', partialError: '', checking: false, failures: 0, nextAt: 0, timer: null,
+  };
+
+  function load() {
+    try {
+      const raw = localStorage.getItem(KEY);
+      return raw ? { ...DEFAULTS, ...JSON.parse(raw) } : { ...DEFAULTS };
+    } catch { return { ...DEFAULTS }; }
+  }
+  function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch { /* storage unavailable */ } }
+
+  const $ = (id) => document.getElementById(id);
+  const setT = (el, t) => { if (el.textContent !== t) el.textContent = t; };
+  const esc = (s) => String(s ?? '').replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+  const cfg = (id) => CONFIGS.find((c) => c.id === id);
+  const partOf = (id) => String(S.parts[id] || cfg(id).part).trim().toUpperCase();
+  const selectedConfigs = () => CONFIGS.filter((c) => S.selected.includes(c.id));
+  const selectedParts = () => selectedConfigs().map((c) => partOf(c.id));
+  const configForPart = (part) => selectedConfigs().find((c) => partOf(c.id) === part);
+  const label = (part) => { const c = configForPart(part); return c ? `${c.color} ${c.storage}` : part; };
+  const swatchClass = (c) => (c.color === 'Night Sky' ? 'sw-night' : 'sw-star');
+  const lookups = () => S.zips.length * S.selected.length;
+  const ready = () => S.zips.length && S.selected.length && (S.demo || S.workerUrl);
+
+  function ago(ms) {
+    const s = Math.max(0, Math.round((Date.now() - ms) / 1000));
+    if (s < 60) return `${s}s ago`;
+    const m = Math.round(s / 60);
+    return m < 60 ? `${m} min ago` : `${Math.round(m / 60)} hr ago`;
+  }
+  function clock(ms) { return new Date(ms).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }); }
+  function listJoin(items) {
+    if (items.length <= 1) return items.join('');
+    return items.slice(0, -1).join(', ') + ' and ' + items[items.length - 1];
+  }
+
+  // ---------- network ----------
+  async function api(path, opts = {}) {
+    const base = S.workerUrl.trim().replace(/\/+$/, '');
+    if (!base) throw new Error('Add your Worker URL under Connection.');
+    let res;
+    try {
+      res = await fetch(base + path, {
+        ...opts,
+        headers: { 'Content-Type': 'application/json', 'X-Access-Token': S.token, ...(opts.headers || {}) },
+      });
+    } catch {
+      throw new Error('Couldn’t reach the Worker. Check the URL and its ALLOWED_ORIGIN setting.');
+    }
+    let data;
+    try { data = await res.json(); } catch { throw new Error(`The Worker returned HTTP ${res.status} without JSON.`); }
+    if (!res.ok) throw new Error(data.error || `The Worker returned HTTP ${res.status}.`);
+    return data;
+  }
+
+  // ---------- demo source ----------
+  const DEMO_STORES = [['Harbor Point', 'Bayside'], ['Midtown Plaza', 'Midtown'], ['Northgate', 'Northgate'], ['Lakeshore', 'Lakeshore'], ['Old Mill', 'Riverside']];
+  const demoState = {};
+  function demoCheck() {
+    return new Promise((resolve) => setTimeout(() => {
+      const parts = selectedParts();
+      const stores = [];
+      S.zips.forEach((zip, zi) => {
+        for (let i = 0; i < 3; i++) {
+          const n = (zi * 2 + i) % DEMO_STORES.length;
+          const id = 'D' + n;
+          if (stores.some((s) => s.id === id)) continue;
+          const st = { id, name: DEMO_STORES[n][0], city: DEMO_STORES[n][1], state: '', distance: +(1.4 + n * 3.1).toFixed(1), zip, parts: {} };
+          parts.forEach((p) => {
+            const k = id + '|' + p;
+            let cur = demoState[k] || 'none';
+            const roll = Math.random();
+            if (cur === 'none' && roll < 0.07) cur = Math.random() < 0.6 ? 'today' : 'later';
+            else if (cur !== 'none' && roll < 0.3) cur = 'none';
+            demoState[k] = cur;
+            st.parts[p] = { status: cur, quote: cur === 'today' ? 'Available Today' : cur === 'later' ? 'Available Tue, Nov 3' : 'Unavailable for pickup' };
+          });
+          stores.push(st);
+        }
+      });
+      resolve({ stores, errors: [], checkedAt: Date.now(), lookups: parts.length * S.zips.length });
+    }, 450));
+  }
+
+  // ---------- polling loop ----------
+  function intervalMs() {
+    const base = (S.demo ? 12 : S.interval) * 1000;
+    const backoff = Math.min(2 ** R.failures, 8);
+    return Math.min(base * backoff, 10 * 60 * 1000);
+  }
+  function schedule() {
+    clearTimeout(R.timer);
+    if (!S.running || !ready()) { R.nextAt = 0; return; }
+    const ms = intervalMs() * (0.85 + Math.random() * 0.3);
+    R.nextAt = Date.now() + ms;
+    R.timer = setTimeout(check, ms);
+  }
+  async function check() {
+    if (R.checking || !ready()) { schedule(); return; }
+    R.checking = true; renderVerdict(); renderTicker();
+    try {
+      const res = S.demo ? await demoCheck() : await api('/check', { method: 'POST', body: JSON.stringify({ parts: selectedParts(), zips: S.zips }) });
+      applyResult(res);
+    } catch (e) {
+      R.failures++;
+      R.lastError = e.message;
+    } finally {
+      R.checking = false;
+      schedule();
+      renderAll();
+    }
+  }
+  function resetResults() {
+    R.result = null; R.statuses = {}; R.changed = new Set(); R.lastError = ''; R.partialError = ''; R.failures = 0;
+  }
+  function restart() { resetResults(); clearTimeout(R.timer); renderAll(); if (S.running && ready()) check(); else schedule(); }
+
+  function applyResult(res) {
+    const baseline = R.result === null;
+    const changed = new Set();
+    const alerts = [];
+    for (const s of res.stores) {
+      for (const [part, info] of Object.entries(s.parts)) {
+        const key = `${s.id}|${part}`;
+        const before = R.statuses[key];
+        if (!baseline && before !== undefined && before !== info.status) {
+          changed.add(key);
+          const up = (RANK[info.status] || 0) > (RANK[before] || 0);
+          addLog(up, up
+            ? `${label(part)}: ${info.quote || 'available'} at ${s.name}`
+            : `${label(part)} is no longer available at ${s.name}`);
+          if (up) alerts.push({ s, part, info });
+        }
+        R.statuses[key] = info.status;
+      }
+    }
+    const allFailed = res.lookups > 0 && res.errors.length >= res.lookups;
+    R.failures = allFailed ? R.failures + 1 : 0;
+    R.lastError = allFailed ? (res.errors[0]?.message || 'Every lookup failed.') : '';
+    R.partialError = !allFailed && res.errors.length ? `${res.errors.length} of ${res.lookups} lookups failed: ${res.errors[0].message}` : '';
+    if (!allFailed || !R.result) R.result = res;
+    R.changed = changed;
+    R.lastCheckAt = res.checkedAt;
+    if (alerts.length) fireAlerts(alerts);
+  }
+
+  function addLog(up, text) {
+    R.log.unshift({ at: Date.now(), up, text });
+    R.log = R.log.slice(0, 60);
+  }
+
+  // ---------- alerts ----------
+  let audio;
+  function unlockAudio() {
+    if (!audio) { try { audio = new (window.AudioContext || window.webkitAudioContext)(); } catch { /* no audio */ } }
+    if (audio && audio.state === 'suspended') audio.resume();
+  }
+  function chime() {
+    if (!S.sound || !audio) return;
+    const t = audio.currentTime;
+    [[784, 0], [1175, 0.14]].forEach(([f, d]) => {
+      const o = audio.createOscillator(), g = audio.createGain();
+      o.type = 'sine'; o.frequency.value = f;
+      g.gain.setValueAtTime(0.0001, t + d);
+      g.gain.exponentialRampToValueAtTime(0.22, t + d + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + d + 0.6);
+      o.connect(g).connect(audio.destination);
+      o.start(t + d); o.stop(t + d + 0.65);
+    });
+  }
+  function fireAlerts(alerts) {
+    chime();
+    if (!S.notify || !('Notification' in window) || Notification.permission !== 'granted') return;
+    const today = alerts.filter((a) => a.info.status === 'today');
+    const top = (today[0] || alerts[0]);
+    const title = today.length ? `iPhone Duo in stock today` : `iPhone Duo pickup opened up`;
+    const body = alerts.slice(0, 4).map((a) => `${label(a.part)} at ${a.s.name}`).join('\n') + (alerts.length > 4 ? `\n…and ${alerts.length - 4} more` : '');
+    try {
+      const n = new Notification(title, { body: body || `${label(top.part)} at ${top.s.name}`, tag: 'duo-watch', renotify: true });
+      n.onclick = () => { window.open(BUY_URL, '_blank', 'noopener'); n.close(); };
+    } catch { /* some browsers only allow notifications from a service worker */ }
+  }
+
+  // ---------- rendering ----------
+  function cells() {
+    const out = [];
+    if (!R.result) return out;
+    for (const s of R.result.stores) {
+      for (const c of selectedConfigs()) {
+        const info = s.parts[partOf(c.id)];
+        if (info && RANK[info.status]) out.push({ s, c, info });
+      }
+    }
+    return out;
+  }
+
+  function renderVerdict() {
+    const box = $('verdictBox'), line = $('verdict'), sub = $('verdictSub');
+    box.className = 'verdict';
+    $('demoNote').hidden = !S.demo;
+
+    if (!S.zips.length || !S.selected.length) {
+      setT(line, !S.zips.length ? 'Add a ZIP code to start watching.' : 'Pick at least one model to watch.');
+      sub.textContent = 'Settings are in the right-hand panel.';
+      return;
+    }
+    if (!S.demo && !S.workerUrl) {
+      setT(line, 'Connect your Worker to check real stores.');
+      sub.textContent = 'Or turn on demo data under Connection to try the board first.';
+      return;
+    }
+    if (R.lastError && !R.result) {
+      box.classList.add('v-error');
+      setT(line, 'The last check didn’t go through.');
+      sub.textContent = R.lastError;
+      return;
+    }
+    if (!R.result) {
+      setT(line, `Checking stores near ${listJoin(S.zips)}…`);
+      sub.textContent = '';
+      return;
+    }
+
+    const hits = cells();
+    const today = hits.filter((h) => h.info.status === 'today');
+    const later = hits.filter((h) => h.info.status === 'later');
+    const nStores = R.result.stores.length;
+    const meta = `${nStores} ${nStores === 1 ? 'store' : 'stores'}, ${S.selected.length} ${S.selected.length === 1 ? 'model' : 'models'}. Last checked ${ago(R.lastCheckAt)}.`;
+    const errNote = R.lastError ? ` Latest check failed: ${R.lastError}` : (R.partialError ? ` ${R.partialError}` : '');
+
+    if (today.length) {
+      box.classList.add('v-today');
+      const first = today[0];
+      const others = today.length - 1;
+      setT(line, `${first.c.color} ${first.c.storage} is ready for pickup today at ${first.s.name}${others ? `, plus ${others} more` : ''}.`);
+      sub.innerHTML = `${esc(meta)}${esc(errNote)} <a href="${BUY_URL}" target="_blank" rel="noopener">Reserve it on apple.com</a>`;
+    } else if (later.length) {
+      box.classList.add('v-later');
+      const first = later[0];
+      setT(line, `Nothing today. ${first.c.color} ${first.c.storage} can be picked up later at ${first.s.name}.`);
+      sub.textContent = `${first.info.quote}. ${meta}${errNote}`;
+    } else {
+      if (R.lastError) box.classList.add('v-error');
+      setT(line, `No Duo pickups near ${listJoin(S.zips)} right now.`);
+      sub.textContent = meta + errNote;
+    }
+  }
+
+  function renderBoard() {
+    const board = $('board');
+    const res = R.result;
+    if (!res) { board.innerHTML = ''; $('storeCount').textContent = ''; return; }
+    if (!res.stores.length) {
+      board.innerHTML = `<p class="empty">Apple didn’t return any stores for these ZIP codes. Double-check them, or try a ZIP closer to a city.</p>`;
+      $('storeCount').textContent = '';
+      return;
+    }
+    const configs = selectedConfigs();
+    const best = (s) => Math.max(0, ...configs.map((c) => RANK[s.parts[partOf(c.id)]?.status] || 0));
+    const stores = [...res.stores].sort((a, b) => best(b) - best(a) || (a.distance ?? 9999) - (b.distance ?? 9999));
+
+    board.innerHTML = stores.map((s) => {
+      const where = [s.city && s.state ? `${s.city}, ${s.state}` : s.city, s.distance != null ? `${s.distance} mi from ${s.zip}` : ''].filter(Boolean).join(' · ');
+      const chips = configs.map((c) => {
+        const part = partOf(c.id);
+        const info = s.parts[part];
+        const st = info ? info.status : 'unknown';
+        const word = { today: 'Today', later: shortQuote(info?.quote) || 'Later', none: 'Unavailable', ineligible: 'Not sold here', unknown: 'No answer' }[st];
+        const changed = R.changed.has(`${s.id}|${part}`) ? ' changed' : '';
+        return `<li class="chip s-${st}${changed}" title="${esc(info?.quote || '')}" aria-label="${esc(`${c.color} ${c.storage}: ${info?.quote || word}`)}">
+          <span class="swatch ${swatchClass(c)}"></span><span class="cfg">${esc(c.storage)}</span><span class="st">${esc(word)}</span></li>`;
+      }).join('');
+      return `<article class="store${best(s) === 2 ? ' has-today' : ''}">
+        <div class="store-head"><h3>${esc(s.name)}</h3><span class="where">${esc(where)}</span></div>
+        <ul class="chips">${chips}</ul></article>`;
+    }).join('');
+    $('storeCount').textContent = `${stores.length} nearby`;
+  }
+  function shortQuote(q) {
+    if (!q) return '';
+    return q.replace(/^available\s*/i, '').replace(/for pickup\s*/i, '').trim();
+  }
+
+  function renderLog() {
+    $('log').innerHTML = R.log.map((e) => `<li><time>${esc(clock(e.at))}</time><span class="${e.up ? 'up' : ''}">${esc(e.text)}</span></li>`).join('');
+    $('logEmpty').hidden = R.log.length > 0;
+  }
+
+  function renderTicker() {
+    let t;
+    if (R.checking) t = 'Checking…';
+    else if (!S.running) t = 'Paused';
+    else if (!ready()) t = 'Waiting for settings';
+    else if (R.nextAt) t = `Next check in ${Math.max(0, Math.ceil((R.nextAt - Date.now()) / 1000))}s`;
+    else t = '';
+    $('ticker').textContent = t;
+    $('runBtn').textContent = S.running ? 'Pause' : 'Resume';
+    const anyToday = cells().some((h) => h.info.status === 'today');
+    document.title = anyToday ? '● In stock · Duo Watch' : 'Duo Watch';
+  }
+
+  function renderSettings() {
+    $('zips').innerHTML = S.zips.map((z) => `<span class="zipchip">${esc(z)}<button data-zip="${esc(z)}" aria-label="Remove ${esc(z)}">×</button></span>`).join('');
+
+    let m = '<span></span>' + STORAGES.map((st) => `<span class="colhead">${st}</span>`).join('');
+    COLORS.forEach((color) => {
+      m += `<span class="rowhead"><span class="swatch ${color === 'Night Sky' ? 'sw-night' : 'sw-star'}"></span>${color}</span>`;
+      STORAGES.forEach((st) => {
+        const c = CONFIGS.find((x) => x.color === color && x.storage === st);
+        const on = S.selected.includes(c.id);
+        m += `<button class="cell" data-cfg="${c.id}" aria-pressed="${on}" aria-label="${color} ${st}">${on ? 'On' : 'Off'}</button>`;
+      });
+    });
+    $('matrix').innerHTML = m;
+
+    $('parts').innerHTML = CONFIGS.map((c) => `<label>${c.color} ${c.storage}<input class="input" data-part="${c.id}" value="${esc(partOf(c.id))}" spellcheck="false" autocomplete="off"></label>`).join('');
+
+    const n = lookups();
+    const hint = $('lookupHint');
+    hint.textContent = n ? `${n} ${n === 1 ? 'lookup' : 'lookups'} per check.` + (n > MAX_LOOKUPS ? ` That’s over the limit of ${MAX_LOOKUPS}. Drop a ZIP or a model.` : '') : '';
+    hint.classList.toggle('warn', n > MAX_LOOKUPS);
+
+    $('intervalSeg').innerHTML = INTERVALS.map((s) => `<button data-int="${s}" aria-pressed="${S.interval === s}">${s < 120 ? s + 's' : s / 60 + ' min'}</button>`).join('');
+
+    $('swNotify').setAttribute('aria-checked', String(S.notify));
+    $('swSound').setAttribute('aria-checked', String(S.sound));
+    $('swDemo').setAttribute('aria-checked', String(S.demo));
+    $('workerUrl').value = S.workerUrl;
+    $('token').value = S.token;
+    $('topic').value = S.topic;
+    $('zipHint').textContent = S.zips.length >= 5 ? 'Five ZIP codes is the limit.' : 'Apple returns the closest stores to each ZIP. Overlapping stores are merged.';
+  }
+
+  function renderAll() { renderVerdict(); renderBoard(); renderLog(); renderTicker(); }
+
+  function setStatus(id, text, kind) {
+    const el = $(id);
+    el.textContent = text;
+    el.className = 'status-line' + (kind ? ' ' + kind : '');
+  }
+
+  // ---------- events ----------
+  document.addEventListener('pointerdown', unlockAudio, { once: true });
+  document.addEventListener('keydown', unlockAudio, { once: true });
+
+  $('runBtn').onclick = () => { S.running = !S.running; save(); if (S.running) check(); else { clearTimeout(R.timer); R.nextAt = 0; } renderTicker(); };
+  $('checkNow').onclick = () => { clearTimeout(R.timer); check(); };
+
+  function addZip() {
+    const v = $('zipInput').value.trim();
+    if (!/^\d{5}$/.test(v)) { $('zipHint').textContent = 'Enter a 5-digit ZIP code.'; return; }
+    if (S.zips.includes(v)) { $('zipInput').value = ''; return; }
+    if (S.zips.length >= 5) return;
+    S.zips.push(v); $('zipInput').value = ''; save(); renderSettings(); restart();
+  }
+  $('zipAdd').onclick = addZip;
+  $('zipInput').addEventListener('keydown', (e) => { if (e.key === 'Enter') addZip(); });
+  $('zips').addEventListener('click', (e) => {
+    const z = e.target.closest('button')?.dataset.zip;
+    if (!z) return;
+    S.zips = S.zips.filter((x) => x !== z); save(); renderSettings(); restart();
+  });
+
+  $('matrix').addEventListener('click', (e) => {
+    const id = e.target.closest('.cell')?.dataset.cfg;
+    if (!id) return;
+    S.selected = S.selected.includes(id) ? S.selected.filter((x) => x !== id) : [...S.selected, id];
+    save(); renderSettings(); restart();
+  });
+  $('parts').addEventListener('change', (e) => {
+    const id = e.target.dataset.part;
+    if (!id) return;
+    const v = e.target.value.trim().toUpperCase();
+    if (v && v !== cfg(id).part) S.parts[id] = v; else delete S.parts[id];
+    save(); restart();
+  });
+
+  $('intervalSeg').addEventListener('click', (e) => {
+    const v = +e.target.closest('button')?.dataset.int;
+    if (!v) return;
+    S.interval = v; save(); renderSettings(); schedule(); renderTicker();
+  });
+
+  $('swNotify').onclick = async () => {
+    if (S.notify) { S.notify = false; save(); renderSettings(); setStatus('notifyStatus', ''); return; }
+    if (!('Notification' in window)) { setStatus('notifyStatus', 'This browser doesn’t support notifications. The chime and tab title still work.', 'bad'); return; }
+    const p = await Notification.requestPermission();
+    if (p === 'granted') { S.notify = true; setStatus('notifyStatus', 'Notifications are on for this browser.', 'ok'); }
+    else setStatus('notifyStatus', 'Notifications are blocked. Allow them in your browser’s site settings.', 'bad');
+    save(); renderSettings();
+  };
+  $('swSound').onclick = () => { S.sound = !S.sound; save(); renderSettings(); unlockAudio(); };
+  $('testLocal').onclick = () => {
+    unlockAudio();
+    const c = selectedConfigs()[0] || CONFIGS[1];
+    fireAlerts([{ s: { name: 'Test Store' }, part: partOf(c.id), info: { status: 'today', quote: 'Available Today' } }]);
+    if (!S.sound && !S.notify) setStatus('notifyStatus', 'Both alerts are off, so the test was silent.', 'bad');
+  };
+
+  $('workerUrl').addEventListener('change', (e) => { S.workerUrl = e.target.value.trim(); save(); if (!S.demo) restart(); });
+  $('token').addEventListener('change', (e) => { S.token = e.target.value.trim(); save(); if (!S.demo) restart(); });
+  $('swDemo').onclick = () => { S.demo = !S.demo; save(); renderSettings(); restart(); };
+  $('testConn').onclick = async () => {
+    setStatus('connStatus', 'Testing…');
+    try {
+      const h = await api('/health');
+      await api('/check', { method: 'POST', body: JSON.stringify({ parts: [], zips: [] }) });
+      setStatus('connStatus', h.kv ? 'Connected. Token accepted. Phone alerts are available.' : 'Connected and token accepted. Bind a KV namespace named DUO to enable phone alerts.', 'ok');
+    } catch (e) { setStatus('connStatus', e.message, 'bad'); }
+  };
+
+  $('topic').addEventListener('change', (e) => { S.topic = e.target.value.trim().replace(/[^\w-]/g, ''); save(); renderSettings(); });
+  $('topicGen').onclick = () => {
+    const a = new Uint8Array(8); crypto.getRandomValues(a);
+    S.topic = 'duo-' + Array.from(a, (b) => b.toString(36).padStart(2, '0')).join('').slice(0, 14);
+    save(); renderSettings();
+    setStatus('bgStatus', 'New topic made. Subscribe to it in the ntfy app, then turn on phone alerts.');
+  };
+  async function putWatch(enabled) {
+    if (enabled && !S.topic) throw new Error('Add an ntfy topic first.');
+    if (enabled && lookups() > MAX_LOOKUPS) throw new Error(`Too many lookups. Keep models × ZIP codes at ${MAX_LOOKUPS} or fewer.`);
+    const labels = Object.fromEntries(selectedConfigs().map((c) => [partOf(c.id), `${c.color} ${c.storage}`]));
+    return api('/watch', { method: 'PUT', body: JSON.stringify({ enabled, parts: selectedParts(), zips: S.zips, labels, ntfyTopic: S.topic }) });
+  }
+  $('bgSave').onclick = async () => {
+    setStatus('bgStatus', 'Saving…');
+    try { await putWatch(true); setStatus('bgStatus', `Phone alerts are on for ${S.selected.length} models near ${listJoin(S.zips)}. Change anything here, then press this again to update.`, 'ok'); }
+    catch (e) { setStatus('bgStatus', e.message, 'bad'); }
+  };
+  $('bgOff').onclick = async () => {
+    try { await putWatch(false); setStatus('bgStatus', 'Phone alerts are off.'); }
+    catch (e) { setStatus('bgStatus', e.message, 'bad'); }
+  };
+  $('bgTest').onclick = async () => {
+    setStatus('bgStatus', 'Sending…');
+    try { await api('/test-alert', { method: 'POST' }); setStatus('bgStatus', 'Test sent. It should land on your phone in a few seconds.', 'ok'); }
+    catch (e) { setStatus('bgStatus', e.message, 'bad'); }
+  };
+  async function loadBgStatus() {
+    if (S.demo || !S.workerUrl) return;
+    try {
+      const { watch, lastRun } = await api('/watch');
+      if (!watch?.enabled) { setStatus('bgStatus', 'Phone alerts are off.'); return; }
+      const run = lastRun ? ` Last background check ${ago(lastRun.at)}${lastRun.errors ? `, with ${lastRun.errors} failed lookups` : ''}.` : ' Waiting for the first background check.';
+      setStatus('bgStatus', `Phone alerts are on for ${watch.parts.length} models near ${listJoin(watch.zips)}.${run}`, lastRun?.errors ? 'bad' : 'ok');
+    } catch { /* stay quiet; Test connection explains problems */ }
+  }
+
+  // ---------- go ----------
+  setInterval(() => { renderTicker(); if (R.result && !R.checking) renderVerdict(); }, 1000);
+  renderSettings();
+  renderAll();
+  loadBgStatus();
+  if (S.running && ready()) check(); else schedule();
+})();
+</script>
+</body>
+</html>
